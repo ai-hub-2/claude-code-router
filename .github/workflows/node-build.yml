@@ -50,7 +50,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Show Package Info
         run: |
@@ -67,17 +67,16 @@ jobs:
             exit 1
           fi
 
+      - name: Install pnpm
+        run: |
+          echo "📦 Installing pnpm..."
+          npm install -g pnpm
+          echo "✅ pnpm installed"
+
       - name: Install Dependencies
         run: |
           echo "📦 Installing dependencies..."
-          if [ -f "pnpm-lock.yaml" ]; then
-            echo "Using pnpm..."
-            npm install -g pnpm
-            pnpm install
-          else
-            echo "Using npm..."
-            npm ci
-          fi
+          pnpm install --frozen-lockfile
           echo "✅ Dependencies installed"
 
       - name: Build Project
