@@ -1,0 +1,108 @@
+name: Minimal Android Build
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'android_app/**'
+      - '.github/workflows/minimal-android-build.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Debug Info
+        run: |
+          echo "=== DEBUG INFO ==="
+          echo "Java version:"
+          java -version
+          echo ""
+          echo "Android SDK: $ANDROID_SDK_ROOT"
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -la
+          echo ""
+          echo "Android app directory:"
+          if [ -d "android_app" ]; then
+            ls -la android_app/
+          else
+            echo "android_app directory not found!"
+          fi
+
+      - name: Test Gradle
+        run: |
+          echo "=== TESTING GRADLE ==="
+          cd android_app
+          echo "Current directory: $(pwd)"
+          echo "Files:"
+          ls -la
+          echo ""
+          echo "Testing gradle version:"
+          gradle --version || echo "Gradle not found, trying ./gradlew"
+          echo ""
+          echo "Testing ./gradlew:"
+          chmod +x gradlew
+          ./gradlew --version || echo "gradlew failed"
+          echo ""
+          echo "Testing gradle tasks:"
+          gradle tasks || ./gradlew tasks || echo "Both gradle and gradlew failed"
+
+      - name: Simple Build Test
+        run: |
+          echo "=== SIMPLE BUILD TEST ==="
+          cd android_app
+          echo "Attempting simple build..."
+          
+          # Try different build approaches
+          echo "1. Trying gradle build..."
+          gradle build || echo "gradle build failed"
+          
+          echo "2. Trying gradlew build..."
+          ./gradlew build || echo "gradlew build failed"
+          
+          echo "3. Trying gradle assembleDebug..."
+          gradle assembleDebug || echo "gradle assembleDebug failed"
+          
+          echo "4. Trying gradlew assembleDebug..."
+          ./gradlew assembleDebug || echo "gradlew assembleDebug failed"
+
+      - name: Check Build Output
+        run: |
+          echo "=== CHECKING BUILD OUTPUT ==="
+          cd android_app
+          
+          echo "Looking for build directories:"
+          find . -name "build" -type d 2>/dev/null || echo "No build directories found"
+          
+          echo "Looking for APK files:"
+          find . -name "*.apk" 2>/dev/null || echo "No APK files found"
+          
+          echo "Looking for any output files:"
+          find . -name "*.jar" -o -name "*.dex" -o -name "*.class" 2>/dev/null | head -5 || echo "No output files found"
+
+      - name: Upload Logs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: build-logs
+          path: |
+            android_app/build/
+            android_app/app/build/
+          retention-days: 1
