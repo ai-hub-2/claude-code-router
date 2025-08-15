@@ -78,6 +78,7 @@ jobs:
           echo "Detected project type: $TYPE"
           echo "Build type: ${{ env.BUILD_TYPE }}"
           echo "Branch: ${{ github.ref_name }}"
+
       - name: Fail if Unknown
         if: steps.detect.outputs.type == 'unknown'
         run: |
