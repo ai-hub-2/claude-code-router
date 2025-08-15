@@ -184,7 +184,7 @@ jobs:
 
       # بناء React Native / Gradle
       - name: Check Android Directory
-        if: steps.detect.outputs.type != 'flutter'
+        if: steps.detect.outputs.type != 'flutter' && steps.detect.outputs.type != 'unknown'
         run: |
           if [ ! -d "android" ]; then
             echo "❌ Android directory not found!"
@@ -194,7 +194,7 @@ jobs:
           echo "✅ Android directory found"
 
       - name: Set Gradle Permissions
-        if: steps.detect.outputs.type != 'flutter'
+        if: steps.detect.outputs.type != 'flutter' && steps.detect.outputs.type != 'unknown'
         run: |
           if [ -f "android/gradlew" ]; then
             chmod +x android/gradlew
@@ -205,7 +205,7 @@ jobs:
           fi
 
       - name: Build RN/Gradle APK
-        if: steps.detect.outputs.type != 'flutter'
+        if: steps.detect.outputs.type != 'flutter' && steps.detect.outputs.type != 'unknown'
         run: |
           cd android
           echo "🏗️ Building ${{ env.BUILD_TYPE }} APK..."
@@ -214,6 +214,7 @@ jobs:
 
       # تحديد مسار الـ APK
       - name: Locate APK
+        if: steps.detect.outputs.type != 'unknown'
         id: apk
         run: |
           echo "🔍 Searching for APK files..."
@@ -253,6 +254,7 @@ jobs:
 
       # رفع الـ APK كـ Artifact
       - name: Upload APK Artifact
+        if: steps.detect.outputs.type != 'unknown'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-${{ env.BUILD_TYPE }}.apk
@@ -260,7 +262,7 @@ jobs:
 
       # إنشاء Release عند وجود Tag
       - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') && steps.detect.outputs.type != 'unknown'
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.apk.outputs.apk_path }}
