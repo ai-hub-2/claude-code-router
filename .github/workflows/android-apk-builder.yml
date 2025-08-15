@@ -1,0 +1,139 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+    paths:
+      - 'android_app/**'
+      - '.github/workflows/android-apk-builder.yml'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'android_app/**'
+  workflow_dispatch:
+    inputs:
+      build-type:
+        description: "Build Type"
+        required: true
+        default: "release"
+        type: choice
+        options: [release, debug]
+
+permissions:
+  contents: write
+
+jobs:
+  build-android-apk:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build-type || 'release' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Show Project Info
+        run: |
+          echo "🔍 Building Android APK..."
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Build Type: ${{ env.BUILD_TYPE }}"
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Check Android Project
+        run: |
+          if [ ! -d "android_app" ]; then
+            echo "❌ Android project not found!"
+            exit 1
+          fi
+          echo "✅ Android project found in android_app/"
+          ls -la android_app/
+
+      - name: Set Gradle Permissions
+        run: |
+          cd android_app
+          chmod +x gradlew
+          echo "✅ Gradle wrapper permissions set"
+
+      - name: Build Android APK
+        run: |
+          cd android_app
+          echo "🏗️ Building ${{ env.BUILD_TYPE }} APK..."
+          ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
+          echo "✅ Android build completed"
+
+      - name: Find APK
+        id: apk
+        run: |
+          echo "🔍 Searching for APK files..."
+          
+          # Search in Android project output
+          if [ -d "android_app/app/build/outputs/apk" ]; then
+            APK_PATH=$(find android_app/app/build/outputs/apk -name "*.apk" | head -n 1)
+          else
+            echo "❌ No APK found!"
+            exit 1
+          fi
+          
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ No APK found!"
+            exit 1
+          fi
+          
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_PATH"
+          
+          APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
+          echo "APK Size: $APK_SIZE"
+          echo "📱 APK ready: $APK_PATH ($APK_SIZE)"
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Claude-Code-Router-Android-${{ env.BUILD_TYPE }}.apk
+          path: ${{ steps.apk.outputs.apk_path }}
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.apk_path }}
+          tag_name: v${{ github.run_number }}
+          name: Claude Code Router Android v${{ github.run_number }}
+          body: |
+            ## Claude Code Router Android App
+            
+            تطبيق Android حقيقي يتصل بالبرنامج الأصلي @musistudio/claude-code-router
+            
+            ### المميزات:
+            - إرسال طلبات حقيقية إلى Claude Code
+            - واجهة مستخدم سهلة وبسيطة
+            - دعم اللغة العربية
+            - اتصال بالخادم المحلي
+            
+            ### التثبيت:
+            1. قم بتحميل ملف APK
+            2. فعّل "تثبيت من مصادر غير معروفة"
+            3. قم بتثبيت التطبيق
+            4. تأكد من تشغيل الخادم المحلي على المنفذ 3000
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Success Summary
+        run: |
+          echo "🎉 Android APK build completed successfully!"
+          echo "Project: Claude Code Router Android"
+          echo "Build Type: ${{ env.BUILD_TYPE }}"
+          echo "APK Path: ${{ steps.apk.outputs.apk_path }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "✅ APK is ready for download!"

@@ -8,6 +8,9 @@ import android.content.Intent
 import android.net.Uri
 import android.text.method.ScrollingMovementMethod
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import org.json.JSONObject
 
 class MainActivity : AppCompatActivity() {
     
@@ -17,6 +20,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var clearButton: Button
     private lateinit var settingsButton: Button
     private lateinit var statusText: TextView
+    private lateinit var serverUrlInput: EditText
+    
+    private val claudeService = ClaudeService()
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -29,9 +35,13 @@ class MainActivity : AppCompatActivity() {
         clearButton = findViewById(R.id.clearButton)
         settingsButton = findViewById(R.id.settingsButton)
         statusText = findViewById(R.id.statusText)
+        serverUrlInput = findViewById(R.id.serverUrlInput)
         
         // Make output scrollable
         outputText.movementMethod = ScrollingMovementMethod()
+        
+        // Set default server URL
+        serverUrlInput.setText("http://localhost:3000")
         
         // Set up click listeners
         sendButton.setOnClickListener {
@@ -51,17 +61,21 @@ class MainActivity : AppCompatActivity() {
         outputText.text = """
             Claude Code Router - Android Version
             
-            هذا التطبيق هو نسخة Android من البرنامج الأصلي:
+            هذا التطبيق يتصل بالبرنامج الأصلي:
             @musistudio/claude-code-router
             
             المميزات:
-            • إرسال طلبات Claude Code
+            • إرسال طلبات حقيقية إلى Claude Code
             • توجيه الطلبات إلى LLM providers
             • واجهة مستخدم سهلة وبسيطة
             • دعم اللغة العربية
             
+            تأكد من تشغيل الخادم المحلي على المنفذ 3000
             اكتب رسالتك في المربع أدناه واضغط "إرسال"
         """.trimIndent()
+        
+        // Check server status on startup
+        checkServerStatus()
     }
     
     private fun processClaudeCode() {
@@ -72,11 +86,38 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        showStatus("🔄 معالجة الطلب...")
+        showStatus("🔄 إرسال الطلب إلى Claude Code...")
+        sendButton.isEnabled = false
         
-        // Simulate processing (in real app, this would call the actual API)
-        val response = simulateClaudeResponse(input)
-        
+        lifecycleScope.launch {
+            try {
+                val result = claudeService.sendClaudeRequest(input)
+                
+                result.fold(
+                    onSuccess = { response ->
+                        runOnUiThread {
+                            handleSuccessResponse(input, response)
+                        }
+                    },
+                    onFailure = { exception ->
+                        runOnUiThread {
+                            handleErrorResponse(input, exception.message ?: "خطأ غير معروف")
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                runOnUiThread {
+                    handleErrorResponse(input, e.message ?: "خطأ غير معروف")
+                }
+            } finally {
+                runOnUiThread {
+                    sendButton.isEnabled = true
+                }
+            }
+        }
+    }
+    
+    private fun handleSuccessResponse(input: String, response: String) {
         outputText.append("\n\n--- طلب جديد ---\n")
         outputText.append("📤 الإرسال: $input\n")
         outputText.append("📥 الرد: $response\n")
@@ -86,12 +127,40 @@ class MainActivity : AppCompatActivity() {
         inputText.text.clear()
     }
     
-    private fun simulateClaudeResponse(input: String): String {
-        return when {
-            input.contains("hello", ignoreCase = true) -> "مرحباً! كيف يمكنني مساعدتك؟"
-            input.contains("code", ignoreCase = true) -> "أرى أنك تريد مساعدة في البرمجة. سأقوم بتوجيه طلبك إلى Claude Code."
-            input.contains("help", ignoreCase = true) -> "أنا هنا لمساعدتك! يمكنني توجيه طلباتك إلى Claude Code."
-            else -> "شكراً لك! تم استلام طلبك وسيتم توجيهه إلى Claude Code للرد عليك."
+    private fun handleErrorResponse(input: String, error: String) {
+        outputText.append("\n\n--- خطأ في الطلب ---\n")
+        outputText.append("📤 الإرسال: $input\n")
+        outputText.append("❌ الخطأ: $error\n")
+        outputText.append("🔧 تأكد من تشغيل الخادم المحلي\n")
+        
+        showStatus("❌ فشل في إرسال الطلب: $error")
+    }
+    
+    private fun checkServerStatus() {
+        lifecycleScope.launch {
+            try {
+                val result = claudeService.checkServerStatus()
+                result.fold(
+                    onSuccess = { isOnline ->
+                        runOnUiThread {
+                            if (isOnline) {
+                                showStatus("✅ الخادم متصل")
+                            } else {
+                                showStatus("⚠️ الخادم غير متصل")
+                            }
+                        }
+                    },
+                    onFailure = { exception ->
+                        runOnUiThread {
+                            showStatus("❌ لا يمكن الاتصال بالخادم")
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                runOnUiThread {
+                    showStatus("❌ خطأ في الاتصال بالخادم")
+                }
+            }
         }
     }
     
