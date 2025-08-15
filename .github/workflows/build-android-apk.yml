@@ -2,9 +2,33 @@ name: Build Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, master, develop, feature/*, bugfix/*, hotfix/* ]
     tags:
       - "v*"
+    paths:
+      - 'android/**'
+      - 'ios/**'
+      - 'lib/**'
+      - 'src/**'
+      - 'pubspec.yaml'
+      - 'package.json'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'app/**'
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'android/**'
+      - 'ios/**'
+      - 'lib/**'
+      - 'src/**'
+      - 'pubspec.yaml'
+      - 'package.json'
+      - 'build.gradle'
+      - 'settings.gradle'
+      - 'app/**'
+  schedule:
+    - cron: '0 0 * * *'  # يومياً في منتصف الليل
   workflow_dispatch:
     inputs:
       build-type:
@@ -27,6 +51,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      - name: Show System Info
+        run: |
+          echo "🏗️ Starting Android APK Build"
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Build Type: ${{ env.BUILD_TYPE }}"
+          echo "Runner: ${{ runner.os }}"
+
       # تحديد نوع المشروع
       - name: Detect Project Type
         id: detect
@@ -41,9 +74,17 @@ jobs:
           fi
           echo "type=$TYPE" >> $GITHUB_OUTPUT
           echo "Detected project type: $TYPE"
+          echo "Build type: ${{ env.BUILD_TYPE }}"
+          echo "Branch: ${{ github.ref_name }}"
       - name: Fail if Unknown
         if: steps.detect.outputs.type == 'unknown'
-        run: exit 1
+        run: |
+          echo "❌ No Android project detected!"
+          echo "This workflow supports:"
+          echo "- Flutter projects (pubspec.yaml + android/)"
+          echo "- React Native projects (package.json with react-native)"
+          echo "- Gradle projects (settings.gradle)"
+          exit 1
 
       # إعداد Java و Android SDK
       - name: Setup Java
@@ -103,6 +144,11 @@ jobs:
           fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
+          
+          # عرض حجم الـ APK
+          APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
+          echo "APK Size: $APK_SIZE"
+          echo "📱 APK ready: $APK_PATH ($APK_SIZE)"
 
       # رفع الـ APK كـ Artifact
       - name: Upload APK Artifact
@@ -119,3 +165,14 @@ jobs:
           files: ${{ steps.apk.outputs.apk_path }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # ملخص النتائج
+      - name: Build Summary
+        run: |
+          echo "🎉 Build completed successfully!"
+          echo "Project Type: ${{ steps.detect.outputs.type }}"
+          echo "Build Type: ${{ env.BUILD_TYPE }}"
+          echo "APK Path: ${{ steps.apk.outputs.apk_path }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "✅ APK is ready for download!"
