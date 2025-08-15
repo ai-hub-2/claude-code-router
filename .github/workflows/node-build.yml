@@ -50,7 +50,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-          cache: "pnpm"
+          cache: "npm"
 
       - name: Show Package Info
         run: |
@@ -67,16 +67,10 @@ jobs:
             exit 1
           fi
 
-      - name: Install pnpm
-        run: |
-          echo "📦 Installing pnpm..."
-          npm install -g pnpm
-          echo "✅ pnpm installed"
-
       - name: Install Dependencies
         run: |
           echo "📦 Installing dependencies..."
-          pnpm install --frozen-lockfile
+          npm install
           echo "✅ Dependencies installed"
 
       - name: Build Project
