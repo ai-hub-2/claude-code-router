@@ -36,17 +36,14 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Gradle
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gradle
-          gradle --version
+      - name: Set Gradle Permissions
+        run: chmod +x gradlew
 
       - name: Install Android SDK components
         run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
       - name: Build APK
-        run: gradle assemble${{ env.BUILD_TYPE }} --no-daemon
+        run: ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
 
       - name: Locate APK
         id: apk
