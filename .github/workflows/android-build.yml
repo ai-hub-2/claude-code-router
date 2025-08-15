@@ -62,7 +62,7 @@ jobs:
 
       # ---- Build APK ----
       - name: Build APK
-        run: ./gradlew assemble${{ env.BUILD_TYPE^ }} --no-daemon
+        run: ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
 
       # ---- Locate APK ----
       - name: Locate APK
