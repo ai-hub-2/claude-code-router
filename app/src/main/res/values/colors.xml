@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Primary Colors -->
+    <color name="primary">#6366F1</color>
+    <color name="primary_dark">#4F46E5</color>
+    <color name="primary_light">#A5B4FC</color>
+    <color name="primary_variant">#3730A3</color>
+    
+    <!-- Secondary Colors -->
+    <color name="secondary">#10B981</color>
+    <color name="secondary_dark">#059669</color>
+    <color name="secondary_light">#6EE7B7</color>
+    <color name="secondary_variant">#047857</color>
+    
+    <!-- Accent Colors -->
+    <color name="accent">#F59E0B</color>
+    <color name="accent_dark">#D97706</color>
+    <color name="accent_light">#FCD34D</color>
+    
+    <!-- Error Colors -->
+    <color name="error">#EF4444</color>
+    <color name="error_dark">#DC2626</color>
+    <color name="error_light">#FCA5A5</color>
+    
+    <!-- Success Colors -->
+    <color name="success">#10B981</color>
+    <color name="success_dark">#059669</color>
+    <color name="success_light">#6EE7B7</color>
+    
+    <!-- Warning Colors -->
+    <color name="warning">#F59E0B</color>
+    <color name="warning_dark">#D97706</color>
+    <color name="warning_light">#FCD34D</color>
+    
+    <!-- Info Colors -->
+    <color name="info">#3B82F6</color>
+    <color name="info_dark">#2563EB</color>
+    <color name="info_light">#93C5FD</color>
+    
+    <!-- Light Theme Colors -->
+    <color name="background_light">#FFFFFF</color>
+    <color name="surface_light">#F8FAFC</color>
+    <color name="card_light">#FFFFFF</color>
+    <color name="text_primary_light">#1E293B</color>
+    <color name="text_secondary_light">#64748B</color>
+    <color name="text_disabled_light">#94A3B8</color>
+    <color name="divider_light">#E2E8F0</color>
+    <color name="border_light">#CBD5E1</color>
+    
+    <!-- Dark Theme Colors -->
+    <color name="background_dark">#0F172A</color>
+    <color name="surface_dark">#1E293B</color>
+    <color name="card_dark">#334155</color>
+    <color name="text_primary_dark">#F1F5F9</color>
+    <color name="text_secondary_dark">#CBD5E1</color>
+    <color name="text_disabled_dark">#64748B</color>
+    <color name="divider_dark">#475569</color>
+    <color name="border_dark">#475569</color>
+    
+    <!-- Code Editor Colors -->
+    <color name="code_background">#1E1E1E</color>
+    <color name="code_text">#D4D4D4</color>
+    <color name="code_keyword">#569CD6</color>
+    <color name="code_string">#CE9178</color>
+    <color name="code_comment">#6A9955</color>
+    <color name="code_number">#B5CEA8</color>
+    <color name="code_operator">#D4D4D4</color>
+    <color name="code_function">#DCDCAA</color>
+    <color name="code_variable">#9CDCFE</color>
+    <color name="code_type">#4EC9B0</color>
+    
+    <!-- Terminal Colors -->
+    <color name="terminal_background">#000000</color>
+    <color name="terminal_text">#FFFFFF</color>
+    <color name="terminal_green">#00FF00</color>
+    <color name="terminal_red">#FF0000</color>
+    <color name="terminal_yellow">#FFFF00</color>
+    <color name="terminal_blue">#0000FF</color>
+    <color name="terminal_cyan">#00FFFF</color>
+    <color name="terminal_magenta">#FF00FF</color>
+    
+    <!-- Status Colors -->
+    <color name="status_online">#10B981</color>
+    <color name="status_offline">#EF4444</color>
+    <color name="status_connecting">#F59E0B</color>
+    <color name="status_error">#EF4444</color>
+    
+    <!-- Common Colors -->
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="transparent">#00000000</color>
+    <color name="semi_transparent">#80000000</color>
+    
+    <!-- Material Design Colors -->
+    <color name="material_red">#F44336</color>
+    <color name="material_pink">#E91E63</color>
+    <color name="material_purple">#9C27B0</color>
+    <color name="material_deep_purple">#673AB7</color>
+    <color name="material_indigo">#3F51B5</color>
+    <color name="material_blue">#2196F3</color>
+    <color name="material_light_blue">#03A9F4</color>
+    <color name="material_cyan">#00BCD4</color>
+    <color name="material_teal">#009688</color>
+    <color name="material_green">#4CAF50</color>
+    <color name="material_light_green">#8BC34A</color>
+    <color name="material_lime">#CDDC39</color>
+    <color name="material_yellow">#FFEB3B</color>
+    <color name="material_amber">#FFC107</color>
+    <color name="material_orange">#FF9800</color>
+    <color name="material_deep_orange">#FF5722</color>
+    <color name="material_brown">#795548</color>
+    <color name="material_grey">#9E9E9E</color>
+    <color name="material_blue_grey">#607D8B</color>
+</resources>
