@@ -48,6 +48,18 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Check Environment
+        run: |
+          echo "🔍 Checking build environment..."
+          echo "Java version:"
+          java -version
+          echo ""
+          echo "Android SDK location:"
+          echo $ANDROID_SDK_ROOT
+          echo ""
+          echo "Gradle version:"
+          gradle --version || echo "Gradle not found in PATH"
+
       - name: Check Android Project
         run: |
           if [ ! -d "android_app" ]; then
@@ -56,6 +68,9 @@ jobs:
           fi
           echo "✅ Android project found in android_app/"
           ls -la android_app/
+          echo ""
+          echo "Checking Android project structure:"
+          find android_app -name "*.gradle" -o -name "*.xml" | head -10
 
       - name: Set Gradle Permissions
         run: |
@@ -67,7 +82,12 @@ jobs:
         run: |
           cd android_app
           echo "🏗️ Building ${{ env.BUILD_TYPE }} APK..."
-          ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
+          echo "Current directory: $(pwd)"
+          echo "Files in current directory:"
+          ls -la
+          echo ""
+          echo "Running gradle build with verbose output..."
+          ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon --stacktrace --info
           echo "✅ Android build completed"
 
       - name: Find APK
