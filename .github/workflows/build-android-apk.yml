@@ -87,13 +87,22 @@ jobs:
           echo "ℹ️ No Android project detected in this repository"
           echo "This is a Node.js project, not an Android project"
           echo ""
+          echo "📋 Current project details:"
+          if [ -f "package.json" ]; then
+            echo "- Has package.json: ✅"
+            PROJECT_NAME=$(node -p "require('./package.json').name")
+            PROJECT_VERSION=$(node -p "require('./package.json').version")
+            echo "- Project name: $PROJECT_NAME"
+            echo "- Project version: $PROJECT_VERSION"
+          fi
+          echo ""
           echo "This workflow supports:"
           echo "- Flutter projects (pubspec.yaml + android/)"
           echo "- React Native projects (package.json with react-native)"
           echo "- Gradle projects (settings.gradle)"
           echo ""
           echo "Since this is not an Android project, the workflow will be skipped"
-          echo "::set-output name=skip_build::true"
+          echo "skip_build=true" >> $GITHUB_OUTPUT
 
       # إعداد Java و Android SDK
       - name: Setup Java
@@ -280,3 +289,6 @@ jobs:
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
           echo "ℹ️ This repository does not contain an Android project"
+          echo ""
+          echo "🎯 This workflow is designed for Android projects only."
+          echo "For Node.js projects, consider using a different workflow."
