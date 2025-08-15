@@ -1,10 +1,8 @@
-name: Build Android APK
+name: Android APK Builder
 
 on:
   push:
-    branches: [ main, master, develop, feature/*, bugfix/*, hotfix/* ]
-    tags:
-      - "v*"
+    branches: [ main, master ]
     paths:
       - '.github/workflows/**'
       - 'android/**'
@@ -29,12 +27,10 @@ on:
       - 'build.gradle'
       - 'settings.gradle'
       - 'app/**'
-  schedule:
-    - cron: '0 0 * * *'  # يومياً في منتصف الليل
   workflow_dispatch:
     inputs:
       build-type:
-        description: "نوع البناء"
+        description: "Build Type"
         required: true
         default: "release"
         type: choice
@@ -44,7 +40,7 @@ permissions:
   contents: write
 
 jobs:
-  build-apk:
+  detect-and-build:
     runs-on: ubuntu-latest
     env:
       BUILD_TYPE: ${{ inputs.build-type || 'release' }}
@@ -53,176 +49,140 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Show System Info
+      - name: Show Project Info
         run: |
-          echo "🏗️ Starting Android APK Build"
+          echo "🔍 Analyzing project type..."
           echo "Repository: ${{ github.repository }}"
           echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
           echo "Build Type: ${{ env.BUILD_TYPE }}"
-          echo "Runner: ${{ runner.os }}"
-          echo "Event: ${{ github.event_name }}"
-          echo "Workflow: ${{ github.workflow }}"
 
-      # تحديد نوع المشروع
       - name: Detect Project Type
-        id: detect
+        id: project-type
         run: |
-          TYPE="unknown"
+          PROJECT_TYPE="unknown"
+          
+          # Check for Flutter project
           if [ -f "pubspec.yaml" ] && [ -d "android" ]; then
-            TYPE="flutter"
+            PROJECT_TYPE="flutter"
+            echo "Found Flutter project (pubspec.yaml + android/)"
+          # Check for React Native project
           elif [ -f "package.json" ] && grep -qi "react-native" package.json; then
-            TYPE="react-native"
+            PROJECT_TYPE="react-native"
+            echo "Found React Native project"
+          # Check for Gradle project
           elif [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
-            TYPE="gradle"
+            PROJECT_TYPE="gradle"
+            echo "Found Gradle project"
+          else
+            echo "No Android project detected"
+            if [ -f "package.json" ]; then
+              PROJECT_NAME=$(node -p "require('./package.json').name")
+              PROJECT_VERSION=$(node -p "require('./package.json').version")
+              echo "This appears to be a Node.js project: $PROJECT_NAME@$PROJECT_VERSION"
+            fi
           fi
-          echo "type=$TYPE" >> $GITHUB_OUTPUT
-          echo "Detected project type: $TYPE"
-          echo "Build type: ${{ env.BUILD_TYPE }}"
-          echo "Branch: ${{ github.ref_name }}"
+          
+          echo "project_type=$PROJECT_TYPE" >> $GITHUB_OUTPUT
+          echo "Detected project type: $PROJECT_TYPE"
 
-      - name: Skip if No Android Project
-        if: steps.detect.outputs.type == 'unknown'
+      - name: Skip Non-Android Projects
+        if: steps.project-type.outputs.project_type == 'unknown'
         run: |
-          echo "ℹ️ No Android project detected in this repository"
-          echo "This is a Node.js project, not an Android project"
+          echo "✅ Workflow completed successfully!"
+          echo "Project Type: Non-Android (Node.js/Other)"
+          echo "Action: Skipped Android build (not applicable)"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
           echo ""
-          echo "📋 Current project details:"
-          if [ -f "package.json" ]; then
-            echo "- Has package.json: ✅"
-            PROJECT_NAME=$(node -p "require('./package.json').name")
-            PROJECT_VERSION=$(node -p "require('./package.json').version")
-            echo "- Project name: $PROJECT_NAME"
-            echo "- Project version: $PROJECT_VERSION"
-          fi
+          echo "ℹ️ This workflow is designed for Android projects only."
+          echo "Supported project types:"
+          echo "- Flutter (pubspec.yaml + android/)"
+          echo "- React Native (package.json with react-native)"
+          echo "- Gradle (settings.gradle)"
           echo ""
-          echo "This workflow supports:"
-          echo "- Flutter projects (pubspec.yaml + android/)"
-          echo "- React Native projects (package.json with react-native)"
-          echo "- Gradle projects (settings.gradle)"
-          echo ""
-          echo "Since this is not an Android project, the workflow will be skipped"
-          echo "skip_build=true" >> $GITHUB_OUTPUT
+          echo "🎯 For non-Android projects, consider using appropriate workflows."
 
-      # إعداد Java و Android SDK
       - name: Setup Java
-        if: steps.detect.outputs.type != 'unknown'
+        if: steps.project-type.outputs.project_type != 'unknown'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Setup Android SDK
-        if: steps.detect.outputs.type != 'unknown'
+        if: steps.project-type.outputs.project_type != 'unknown'
         uses: android-actions/setup-android@v3
 
-      - name: Check Gradle Files
-        if: steps.detect.outputs.type == 'gradle'
-        run: |
-          if [ ! -f "settings.gradle" ] && [ ! -f "settings.gradle.kts" ]; then
-            echo "❌ No Gradle settings file found!"
-            echo "Expected settings.gradle or settings.gradle.kts"
-            exit 1
-          fi
-          echo "✅ Gradle settings file found"
-
-      # إعداد Node لمشاريع React Native
-      - name: Setup Node
-        if: steps.detect.outputs.type == 'react-native'
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Check Package.json
-        if: steps.detect.outputs.type == 'react-native'
-        run: |
-          if [ ! -f "package.json" ]; then
-            echo "❌ package.json not found!"
-            exit 1
-          fi
-          echo "✅ package.json found"
-
-      - name: Install JS Dependencies
-        if: steps.detect.outputs.type == 'react-native'
-        run: |
-          echo "📦 Installing React Native dependencies..."
-          npm ci
-          echo "✅ React Native dependencies installed"
-
-      # إعداد Flutter
       - name: Setup Flutter
-        if: steps.detect.outputs.type == 'flutter'
+        if: steps.project-type.outputs.project_type == 'flutter'
         uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.22.0"
           channel: stable
 
-      - name: Check Pubspec.yaml
-        if: steps.detect.outputs.type == 'flutter'
-        run: |
-          if [ ! -f "pubspec.yaml" ]; then
-            echo "❌ pubspec.yaml not found!"
-            exit 1
-          fi
-          echo "✅ pubspec.yaml found"
+      - name: Setup Node.js
+        if: steps.project-type.outputs.project_type == 'react-native'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
 
-      - name: Flutter Pub Get
-        if: steps.detect.outputs.type == 'flutter'
+      - name: Install Flutter Dependencies
+        if: steps.project-type.outputs.project_type == 'flutter'
         run: |
           echo "📦 Installing Flutter dependencies..."
           flutter pub get
           echo "✅ Flutter dependencies installed"
 
-      # بناء Flutter
+      - name: Install React Native Dependencies
+        if: steps.project-type.outputs.project_type == 'react-native'
+        run: |
+          echo "📦 Installing React Native dependencies..."
+          npm ci
+          echo "✅ React Native dependencies installed"
+
       - name: Build Flutter APK
-        if: steps.detect.outputs.type == 'flutter'
+        if: steps.project-type.outputs.project_type == 'flutter'
         run: |
           echo "🏗️ Building Flutter ${{ env.BUILD_TYPE }} APK..."
           flutter build apk --${{ env.BUILD_TYPE }}
           echo "✅ Flutter build completed"
 
-      # بناء React Native / Gradle
-      - name: Check Android Directory
-        if: steps.detect.outputs.type != 'flutter' && steps.detect.outputs.type != 'unknown'
+      - name: Build React Native APK
+        if: steps.project-type.outputs.project_type == 'react-native'
         run: |
-          if [ ! -d "android" ]; then
-            echo "❌ Android directory not found!"
-            echo "Expected android/ directory for ${{ steps.detect.outputs.type }} project"
-            exit 1
-          fi
-          echo "✅ Android directory found"
-
-      - name: Set Gradle Permissions
-        if: steps.detect.outputs.type != 'flutter' && steps.detect.outputs.type != 'unknown'
-        run: |
-          if [ -f "android/gradlew" ]; then
-            chmod +x android/gradlew
-            echo "✅ Gradle wrapper permissions set"
-          else
-            echo "❌ Gradle wrapper not found at android/gradlew"
-            exit 1
-          fi
-
-      - name: Build RN/Gradle APK
-        if: steps.detect.outputs.type != 'flutter' && steps.detect.outputs.type != 'unknown'
-        run: |
+          echo "🏗️ Building React Native ${{ env.BUILD_TYPE }} APK..."
           cd android
-          echo "🏗️ Building ${{ env.BUILD_TYPE }} APK..."
+          chmod +x gradlew
           ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
+          echo "✅ React Native build completed"
+
+      - name: Build Gradle APK
+        if: steps.project-type.outputs.project_type == 'gradle'
+        run: |
+          echo "🏗️ Building Gradle ${{ env.BUILD_TYPE }} APK..."
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+            ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
+          elif [ -d "android" ] && [ -f "android/gradlew" ]; then
+            cd android
+            chmod +x gradlew
+            ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
+          else
+            echo "❌ No Gradle wrapper found"
+            exit 1
+          fi
           echo "✅ Gradle build completed"
 
-      # تحديد مسار الـ APK
-      - name: Locate APK
-        if: steps.detect.outputs.type != 'unknown'
+      - name: Find APK
+        if: steps.project-type.outputs.project_type != 'unknown'
         id: apk
         run: |
           echo "🔍 Searching for APK files..."
           
-          # البحث في جميع المسارات المحتملة
+          # Search in common APK locations
           APK_PATH=""
           
-          # البحث في مجلد build/outputs/apk
           if [ -d "build/app/outputs/apk" ]; then
             APK_PATH=$(find build/app/outputs/apk -name "*.apk" | head -n 1)
           elif [ -d "android/app/build/outputs/apk" ]; then
@@ -230,67 +190,34 @@ jobs:
           elif [ -d "build/outputs/apk" ]; then
             APK_PATH=$(find build/outputs/apk -name "*.apk" | head -n 1)
           else
-            # البحث في جميع أنحاء المشروع
             APK_PATH=$(find . -name "*.apk" | head -n 1)
           fi
           
           if [ -z "$APK_PATH" ]; then
             echo "❌ No APK found!"
-            echo "Searched in:"
-            echo "- build/app/outputs/apk/"
-            echo "- android/app/build/outputs/apk/"
-            echo "- build/outputs/apk/"
-            echo "- All project directories"
             exit 1
           fi
           
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
           
-          # عرض حجم الـ APK
           APK_SIZE=$(du -h "$APK_PATH" | cut -f1)
           echo "APK Size: $APK_SIZE"
-          echo "📱 APK ready: $APK_PATH ($APK_SIZE)"
 
-      # رفع الـ APK كـ Artifact
-      - name: Upload APK Artifact
-        if: steps.detect.outputs.type != 'unknown'
+      - name: Upload APK
+        if: steps.project-type.outputs.project_type != 'unknown'
         uses: actions/upload-artifact@v4
         with:
           name: ${{ github.event.repository.name }}-${{ env.BUILD_TYPE }}.apk
           path: ${{ steps.apk.outputs.apk_path }}
 
-      # إنشاء Release عند وجود Tag
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/') && steps.detect.outputs.type != 'unknown'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: ${{ steps.apk.outputs.apk_path }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # ملخص النتائج
-      - name: Build Summary
-        if: steps.detect.outputs.type != 'unknown'
+      - name: Build Success Summary
+        if: steps.project-type.outputs.project_type != 'unknown'
         run: |
-          echo "🎉 Build completed successfully!"
-          echo "Project Type: ${{ steps.detect.outputs.type }}"
+          echo "🎉 Android APK build completed successfully!"
+          echo "Project Type: ${{ steps.project-type.outputs.project_type }}"
           echo "Build Type: ${{ env.BUILD_TYPE }}"
           echo "APK Path: ${{ steps.apk.outputs.apk_path }}"
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
           echo "✅ APK is ready for download!"
-
-      # رسالة عند تخطي البناء
-      - name: Skip Summary
-        if: steps.detect.outputs.type == 'unknown'
-        run: |
-          echo "✅ Workflow completed successfully!"
-          echo "Project Type: Node.js (not Android)"
-          echo "Action: Skipped Android build (not applicable)"
-          echo "Branch: ${{ github.ref_name }}"
-          echo "Commit: ${{ github.sha }}"
-          echo "ℹ️ This repository does not contain an Android project"
-          echo ""
-          echo "🎯 This workflow is designed for Android projects only."
-          echo "For Node.js projects, consider using a different workflow."
