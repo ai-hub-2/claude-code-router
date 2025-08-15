@@ -191,7 +191,7 @@ jobs:
         run: |
           cd android
           echo "🏗️ Building ${{ env.BUILD_TYPE }} APK..."
-          ./gradlew assemble${{ env.BUILD_TYPE^ }} --no-daemon
+          ./gradlew assemble${{ env.BUILD_TYPE }} --no-daemon
           echo "✅ Gradle build completed"
 
       # تحديد مسار الـ APK
