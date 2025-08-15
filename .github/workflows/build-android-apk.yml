@@ -59,6 +59,8 @@ jobs:
           echo "Commit: ${{ github.sha }}"
           echo "Build Type: ${{ env.BUILD_TYPE }}"
           echo "Runner: ${{ runner.os }}"
+          echo "Event: ${{ github.event_name }}"
+          echo "Workflow: ${{ github.workflow }}"
 
       # تحديد نوع المشروع
       - name: Detect Project Type
@@ -96,6 +98,16 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Check Gradle Files
+        if: steps.detect.outputs.type == 'gradle'
+        run: |
+          if [ ! -f "settings.gradle" ] && [ ! -f "settings.gradle.kts" ]; then
+            echo "❌ No Gradle settings file found!"
+            echo "Expected settings.gradle or settings.gradle.kts"
+            exit 1
+          fi
+          echo "✅ Gradle settings file found"
+
       # إعداد Node لمشاريع React Native
       - name: Setup Node
         if: steps.detect.outputs.type == 'react-native'
@@ -104,9 +116,21 @@ jobs:
           node-version: "20"
           cache: "npm"
 
+      - name: Check Package.json
+        if: steps.detect.outputs.type == 'react-native'
+        run: |
+          if [ ! -f "package.json" ]; then
+            echo "❌ package.json not found!"
+            exit 1
+          fi
+          echo "✅ package.json found"
+
       - name: Install JS Dependencies
         if: steps.detect.outputs.type == 'react-native'
-        run: npm ci
+        run: |
+          echo "📦 Installing React Native dependencies..."
+          npm ci
+          echo "✅ React Native dependencies installed"
 
       # إعداد Flutter
       - name: Setup Flutter
@@ -116,32 +140,91 @@ jobs:
           flutter-version: "3.22.0"
           channel: stable
 
+      - name: Check Pubspec.yaml
+        if: steps.detect.outputs.type == 'flutter'
+        run: |
+          if [ ! -f "pubspec.yaml" ]; then
+            echo "❌ pubspec.yaml not found!"
+            exit 1
+          fi
+          echo "✅ pubspec.yaml found"
+
       - name: Flutter Pub Get
         if: steps.detect.outputs.type == 'flutter'
-        run: flutter pub get
+        run: |
+          echo "📦 Installing Flutter dependencies..."
+          flutter pub get
+          echo "✅ Flutter dependencies installed"
 
       # بناء Flutter
       - name: Build Flutter APK
         if: steps.detect.outputs.type == 'flutter'
-        run: flutter build apk --${{ env.BUILD_TYPE }}
+        run: |
+          echo "🏗️ Building Flutter ${{ env.BUILD_TYPE }} APK..."
+          flutter build apk --${{ env.BUILD_TYPE }}
+          echo "✅ Flutter build completed"
 
       # بناء React Native / Gradle
+      - name: Check Android Directory
+        if: steps.detect.outputs.type != 'flutter'
+        run: |
+          if [ ! -d "android" ]; then
+            echo "❌ Android directory not found!"
+            echo "Expected android/ directory for ${{ steps.detect.outputs.type }} project"
+            exit 1
+          fi
+          echo "✅ Android directory found"
+
       - name: Set Gradle Permissions
         if: steps.detect.outputs.type != 'flutter'
-        run: chmod +x android/gradlew
+        run: |
+          if [ -f "android/gradlew" ]; then
+            chmod +x android/gradlew
+            echo "✅ Gradle wrapper permissions set"
+          else
+            echo "❌ Gradle wrapper not found at android/gradlew"
+            exit 1
+          fi
 
       - name: Build RN/Gradle APK
         if: steps.detect.outputs.type != 'flutter'
-        run: cd android && ./gradlew assemble${{ env.BUILD_TYPE^ }} --no-daemon
+        run: |
+          cd android
+          echo "🏗️ Building ${{ env.BUILD_TYPE }} APK..."
+          ./gradlew assemble${{ env.BUILD_TYPE^ }} --no-daemon
+          echo "✅ Gradle build completed"
 
       # تحديد مسار الـ APK
       - name: Locate APK
         id: apk
         run: |
-          APK_PATH=$(find . -name "*.apk" | grep "/${{ env.BUILD_TYPE }}/" | head -n 1)
-          if [ -z "$APK_PATH" ]; then
-            echo "No APK found!" && exit 1
+          echo "🔍 Searching for APK files..."
+          
+          # البحث في جميع المسارات المحتملة
+          APK_PATH=""
+          
+          # البحث في مجلد build/outputs/apk
+          if [ -d "build/app/outputs/apk" ]; then
+            APK_PATH=$(find build/app/outputs/apk -name "*.apk" | head -n 1)
+          elif [ -d "android/app/build/outputs/apk" ]; then
+            APK_PATH=$(find android/app/build/outputs/apk -name "*.apk" | head -n 1)
+          elif [ -d "build/outputs/apk" ]; then
+            APK_PATH=$(find build/outputs/apk -name "*.apk" | head -n 1)
+          else
+            # البحث في جميع أنحاء المشروع
+            APK_PATH=$(find . -name "*.apk" | head -n 1)
           fi
+          
+          if [ -z "$APK_PATH" ]; then
+            echo "❌ No APK found!"
+            echo "Searched in:"
+            echo "- build/app/outputs/apk/"
+            echo "- android/app/build/outputs/apk/"
+            echo "- build/outputs/apk/"
+            echo "- All project directories"
+            exit 1
+          fi
+          
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
           echo "Found APK: $APK_PATH"
           
