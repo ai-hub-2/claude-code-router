@@ -81,24 +81,30 @@ jobs:
           echo "Build type: ${{ env.BUILD_TYPE }}"
           echo "Branch: ${{ github.ref_name }}"
 
-      - name: Fail if Unknown
+      - name: Skip if No Android Project
         if: steps.detect.outputs.type == 'unknown'
         run: |
-          echo "❌ No Android project detected!"
+          echo "ℹ️ No Android project detected in this repository"
+          echo "This is a Node.js project, not an Android project"
+          echo ""
           echo "This workflow supports:"
           echo "- Flutter projects (pubspec.yaml + android/)"
           echo "- React Native projects (package.json with react-native)"
           echo "- Gradle projects (settings.gradle)"
-          exit 1
+          echo ""
+          echo "Since this is not an Android project, the workflow will be skipped"
+          echo "::set-output name=skip_build::true"
 
       # إعداد Java و Android SDK
       - name: Setup Java
+        if: steps.detect.outputs.type != 'unknown'
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Setup Android SDK
+        if: steps.detect.outputs.type != 'unknown'
         uses: android-actions/setup-android@v3
 
       - name: Check Gradle Files
@@ -254,6 +260,7 @@ jobs:
 
       # ملخص النتائج
       - name: Build Summary
+        if: steps.detect.outputs.type != 'unknown'
         run: |
           echo "🎉 Build completed successfully!"
           echo "Project Type: ${{ steps.detect.outputs.type }}"
@@ -262,3 +269,14 @@ jobs:
           echo "Branch: ${{ github.ref_name }}"
           echo "Commit: ${{ github.sha }}"
           echo "✅ APK is ready for download!"
+
+      # رسالة عند تخطي البناء
+      - name: Skip Summary
+        if: steps.detect.outputs.type == 'unknown'
+        run: |
+          echo "✅ Workflow completed successfully!"
+          echo "Project Type: Node.js (not Android)"
+          echo "Action: Skipped Android build (not applicable)"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "ℹ️ This repository does not contain an Android project"
