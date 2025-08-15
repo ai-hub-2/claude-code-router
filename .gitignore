@@ -3,3 +3,11 @@ node_modules
 log.txt
 .idea
 dist
+
+# Android
+local.properties
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
