@@ -1,0 +1,121 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      build-type:
+        description: "نوع البناء"
+        required: true
+        default: "release"
+        type: choice
+        options: [release, debug]
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    env:
+      BUILD_TYPE: ${{ inputs.build-type || 'release' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # تحديد نوع المشروع
+      - name: Detect Project Type
+        id: detect
+        run: |
+          TYPE="unknown"
+          if [ -f "pubspec.yaml" ] && [ -d "android" ]; then
+            TYPE="flutter"
+          elif [ -f "package.json" ] && grep -qi "react-native" package.json; then
+            TYPE="react-native"
+          elif [ -f "settings.gradle" ] || [ -f "settings.gradle.kts" ]; then
+            TYPE="gradle"
+          fi
+          echo "type=$TYPE" >> $GITHUB_OUTPUT
+          echo "Detected project type: $TYPE"
+      - name: Fail if Unknown
+        if: steps.detect.outputs.type == 'unknown'
+        run: exit 1
+
+      # إعداد Java و Android SDK
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # إعداد Node لمشاريع React Native
+      - name: Setup Node
+        if: steps.detect.outputs.type == 'react-native'
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install JS Dependencies
+        if: steps.detect.outputs.type == 'react-native'
+        run: npm ci
+
+      # إعداد Flutter
+      - name: Setup Flutter
+        if: steps.detect.outputs.type == 'flutter'
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.22.0"
+          channel: stable
+
+      - name: Flutter Pub Get
+        if: steps.detect.outputs.type == 'flutter'
+        run: flutter pub get
+
+      # بناء Flutter
+      - name: Build Flutter APK
+        if: steps.detect.outputs.type == 'flutter'
+        run: flutter build apk --${{ env.BUILD_TYPE }}
+
+      # بناء React Native / Gradle
+      - name: Set Gradle Permissions
+        if: steps.detect.outputs.type != 'flutter'
+        run: chmod +x android/gradlew
+
+      - name: Build RN/Gradle APK
+        if: steps.detect.outputs.type != 'flutter'
+        run: cd android && ./gradlew assemble${{ env.BUILD_TYPE^ }} --no-daemon
+
+      # تحديد مسار الـ APK
+      - name: Locate APK
+        id: apk
+        run: |
+          APK_PATH=$(find . -name "*.apk" | grep "/${{ env.BUILD_TYPE }}/" | head -n 1)
+          if [ -z "$APK_PATH" ]; then
+            echo "No APK found!" && exit 1
+          fi
+          echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
+          echo "Found APK: $APK_PATH"
+
+      # رفع الـ APK كـ Artifact
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ github.event.repository.name }}-${{ env.BUILD_TYPE }}.apk
+          path: ${{ steps.apk.outputs.apk_path }}
+
+      # إنشاء Release عند وجود Tag
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.apk.outputs.apk_path }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
