@@ -1,0 +1,79 @@
+name: Debug Android Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-34"
+          sdkmanager "build-tools;34.0.0"
+
+      - name: Setup Gradle Wrapper
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Show Project Structure
+        run: |
+          echo "=== PROJECT STRUCTURE ==="
+          find . -type f -name "*.gradle" -o -name "*.properties" -o -name "*.xml" | head -20
+          echo ""
+          echo "=== ROOT DIRECTORY ==="
+          ls -la
+          echo ""
+          echo "=== APP DIRECTORY ==="
+          ls -la app/ || echo "No app directory found"
+
+      - name: Show Gradle Files
+        run: |
+          echo "=== SETTINGS.GRADLE ==="
+          cat settings.gradle
+          echo ""
+          echo "=== BUILD.GRADLE (ROOT) ==="
+          cat build.gradle
+          echo ""
+          echo "=== APP/BUILD.GRADLE ==="
+          cat app/build.gradle
+
+      - name: Test Gradle Projects
+        run: |
+          echo "=== GRADLE PROJECTS ==="
+          ./gradlew projects
+
+      - name: Test Gradle Tasks
+        run: |
+          echo "=== GRADLE TASKS ==="
+          ./gradlew tasks
+
+      - name: Test Gradle Dependencies
+        run: |
+          echo "=== GRADLE DEPENDENCIES ==="
+          ./gradlew dependencies
+
+      - name: Try Clean Build
+        run: |
+          echo "=== TRYING CLEAN BUILD ==="
+          ./gradlew clean --stacktrace
+
+      - name: Try Simple Build
+        run: |
+          echo "=== TRYING SIMPLE BUILD ==="
+          ./gradlew assembleDebug --stacktrace --info
