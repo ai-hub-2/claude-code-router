@@ -89,36 +89,36 @@ jobs:
       - name: Test Gradle Compile with Details
         run: |
           echo "=== TESTING GRADLE COMPILE WITH DETAILS ==="
-          ./gradlew compileDebugJavaWithJavac --info --stacktrace
+          ./gradlew compileReleaseJavaWithJavac --info --stacktrace
 
       - name: Test Gradle Kotlin Compile with Details
         run: |
           echo "=== TESTING GRADLE KOTLIN COMPILE WITH DETAILS ==="
-          ./gradlew compileDebugKotlin --info --stacktrace
+          ./gradlew compileReleaseKotlin --info --stacktrace
 
       - name: Test Gradle Process Resources with Details
         run: |
           echo "=== TESTING GRADLE PROCESS RESOURCES WITH DETAILS ==="
-          ./gradlew processDebugResources --info --stacktrace
+          ./gradlew processReleaseResources --info --stacktrace
 
       - name: Test Gradle Package with Details
         run: |
           echo "=== TESTING GRADLE PACKAGE WITH DETAILS ==="
-          ./gradlew packageDebug --info --stacktrace
+          ./gradlew packageRelease --info --stacktrace
 
       - name: Build APK with Full Logs
         run: |
           echo "=== BUILDING APK WITH FULL LOGS ==="
-          ./gradlew assembleDebug --no-daemon --stacktrace --info --debug
+          ./gradlew assembleRelease --no-daemon --stacktrace --info --debug
           echo "=== BUILD COMPLETED ==="
 
       - name: Check Build Result
         run: |
           echo "=== CHECKING BUILD RESULT ==="
-          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
             echo "✅ SUCCESS: APK created successfully!"
-            ls -la app/build/outputs/apk/debug/
-            echo "APK size: $(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)"
+            ls -la app/build/outputs/apk/release/
+            echo "APK size: $(du -h app/build/outputs/apk/release/app-release.apk | cut -f1)"
           else
             echo "❌ FAILURE: APK not found"
             echo "Searching for any APK files..."
@@ -131,5 +131,5 @@ jobs:
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug.apk
-          path: app/build/outputs/apk/debug/app-debug.apk
+          name: app-release.apk
+          path: app/build/outputs/apk/release/app-release.apk
