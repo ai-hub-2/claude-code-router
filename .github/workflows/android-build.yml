@@ -1,4 +1,4 @@
-name: Build Claude Code Router APK (No Cache - Reliable)
+name: Build Claude Code Router APK (Gradle Wrapper)
 
 on:
   push:
@@ -34,49 +34,60 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # ---- Install Gradle via apt (no cache) ----
-      - name: Install Gradle
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y gradle
-          gradle --version
-
       # ---- Android SDK ----
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # ---- Clear all cache directories ----
-      - name: Clear All Cache
+      # ---- Setup Gradle Wrapper ----
+      - name: Setup Gradle Wrapper
         run: |
-          echo "🧹 مسح جميع أنواع الكاش..."
-          rm -rf ~/.gradle
-          rm -rf ~/.android
+          echo "🔧 إعداد Gradle Wrapper..."
+          chmod +x gradlew
+          ./gradlew --version
+          echo "✅ Gradle Wrapper جاهز"
+
+      # ---- Clear Cache ----
+      - name: Clear Cache
+        run: |
+          echo "🧹 مسح الكاش..."
+          rm -rf ~/.gradle/caches
           rm -rf .gradle
           rm -rf build
           rm -rf app/build
-          echo "✅ تم مسح جميع الكاش"
+          echo "✅ تم مسح الكاش"
 
       # ---- Install SDK Components ----
       - name: Install SDK Components
         run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      # ---- Create gradle.properties to disable cache ----
-      - name: Disable Gradle Cache
+      # ---- Create gradle.properties ----
+      - name: Create gradle.properties
         run: |
-          echo "org.gradle.caching=false" > gradle.properties
-          echo "org.gradle.parallel=false" >> gradle.properties
-          echo "org.gradle.configureondemand=false" >> gradle.properties
-          echo "org.gradle.daemon=false" >> gradle.properties
-          echo "✅ تم تعطيل جميع أنواع الكاش في Gradle"
+          echo "📝 إنشاء gradle.properties..."
+          cat > gradle.properties << EOF
+          org.gradle.daemon=false
+          org.gradle.caching=false
+          org.gradle.parallel=false
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+          echo "✅ تم إنشاء gradle.properties"
 
-      # ---- Build APK using system gradle ----
+      # ---- Test Gradle Setup ----
+      - name: Test Gradle Setup
+        run: |
+          echo "🧪 اختبار إعداد Gradle..."
+          ./gradlew projects
+          echo "✅ اختبار Gradle نجح"
+
+      # ---- Build APK ----
       - name: Build APK
         run: |
           echo "🏗️ بدء بناء APK..."
           if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
-            gradle assembleRelease --no-daemon --no-build-cache --no-configuration-cache
+            ./gradlew assembleRelease --no-daemon --stacktrace
           else
-            gradle assembleDebug --no-daemon --no-build-cache --no-configuration-cache
+            ./gradlew assembleDebug --no-daemon --stacktrace
           fi
           echo "✅ تم بناء APK بنجاح"
 

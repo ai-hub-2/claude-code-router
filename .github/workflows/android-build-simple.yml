@@ -30,21 +30,12 @@ jobs:
           sdkmanager "build-tools;34.0.0"
           echo "Android SDK components installed successfully"
 
-      - name: Install Gradle
+      - name: Setup Gradle Wrapper
         run: |
-          echo "Installing Gradle..."
-          sudo apt-get update
-          sudo apt-get install -y gradle
-          gradle --version
-          echo "Gradle installed successfully"
-
-      - name: Set Environment Variables
-        run: |
-          echo "Setting environment variables..."
-          export ANDROID_HOME=/usr/local/lib/android/sdk
-          export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
-          echo "ANDROID_HOME=$ANDROID_HOME"
-          echo "Environment variables set successfully"
+          echo "Setting up Gradle Wrapper..."
+          chmod +x gradlew
+          ./gradlew --version
+          echo "Gradle Wrapper setup completed"
 
       - name: Create gradle.properties
         run: |
@@ -61,15 +52,15 @@ jobs:
       - name: Test Gradle Setup
         run: |
           echo "Testing Gradle setup..."
-          gradle --version
-          gradle projects
+          ./gradlew --version
+          ./gradlew projects
           echo "Gradle setup test completed"
 
       - name: Build APK
         run: |
           echo "Building APK..."
-          gradle clean
-          gradle assembleDebug --no-daemon --stacktrace
+          ./gradlew clean
+          ./gradlew assembleDebug --no-daemon --stacktrace
           echo "Build completed"
 
       - name: Find APK
