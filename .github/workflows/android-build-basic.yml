@@ -1,0 +1,92 @@
+name: Basic Android Build Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-34"
+          sdkmanager "build-tools;34.0.0"
+
+      - name: Setup Gradle Wrapper
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Show Environment
+        run: |
+          echo "=== ENVIRONMENT INFO ==="
+          echo "JAVA_HOME: $JAVA_HOME"
+          echo "ANDROID_HOME: $ANDROID_HOME"
+          echo "ANDROID_SDK_ROOT: $ANDROID_SDK_ROOT"
+          echo "PATH: $PATH"
+
+      - name: Show Project Files
+        run: |
+          echo "=== PROJECT FILES ==="
+          ls -la
+          echo ""
+          echo "=== GRADLE FILES ==="
+          find . -name "*.gradle" -type f
+          echo ""
+          echo "=== GRADLE PROPERTIES ==="
+          find . -name "*.properties" -type f
+
+      - name: Show Gradle Files Content
+        run: |
+          echo "=== SETTINGS.GRADLE ==="
+          cat settings.gradle
+          echo ""
+          echo "=== BUILD.GRADLE (ROOT) ==="
+          cat build.gradle
+          echo ""
+          echo "=== APP/BUILD.GRADLE ==="
+          cat app/build.gradle
+
+      - name: Test Gradle Basic
+        run: |
+          echo "=== TESTING GRADLE BASIC ==="
+          ./gradlew --help
+          echo "✅ Gradle help works"
+
+      - name: Test Gradle Projects
+        run: |
+          echo "=== TESTING GRADLE PROJECTS ==="
+          ./gradlew projects
+          echo "✅ Gradle projects works"
+
+      - name: Test Gradle Tasks
+        run: |
+          echo "=== TESTING GRADLE TASKS ==="
+          ./gradlew tasks
+          echo "✅ Gradle tasks works"
+
+      - name: Test Gradle Clean
+        run: |
+          echo "=== TESTING GRADLE CLEAN ==="
+          ./gradlew clean
+          echo "✅ Gradle clean works"
+
+      - name: Test Gradle Build
+        run: |
+          echo "=== TESTING GRADLE BUILD ==="
+          ./gradlew build --stacktrace
+          echo "✅ Gradle build works"
