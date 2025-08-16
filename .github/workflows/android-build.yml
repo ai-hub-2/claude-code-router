@@ -1,4 +1,4 @@
-name: Build Claude Code Router APK
+name: Build Claude Code Router APK (No Cache)
 
 on:
   push:
@@ -34,13 +34,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # ---- Gradle 8.3 (without cache) ----
+      # ---- Gradle 8.3 ----
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.3
-          cache-read-only: false
-          cache-write-only: false
 
       # ---- Android SDK ----
       - name: Setup Android SDK
@@ -57,29 +55,10 @@ jobs:
             echo "gradle-wrapper.jar مفقود أو تالف!"
             exit 1
           fi
-          echo "✅ gradle-wrapper.jar موجود وصحيح"
-
-      # ---- Disable Gradle Cache completely ----
-      - name: Disable Gradle Cache
-        run: |
-          rm -rf ~/.gradle/caches
-          rm -rf .gradle
-          mkdir -p ~/.gradle
-          echo "org.gradle.caching=false" > ~/.gradle/gradle.properties
-          echo "✅ تم تعطيل Gradle cache تماماً"
 
       # ---- Install SDK Components ----
       - name: Install SDK Components
         run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
-
-      # ---- Verify Gradle Setup ----
-      - name: Verify Gradle Setup
-        run: |
-          echo "🔍 التحقق من إعداد Gradle..."
-          echo "org.gradle.caching=false" >> gradle.properties
-          echo "org.gradle.parallel=false" >> gradle.properties
-          ./gradlew --version
-          echo "✅ Gradle جاهز للبناء (بدون cache)"
 
       # ---- Build APK ----
       - name: Build APK
@@ -94,17 +73,12 @@ jobs:
       - name: Locate APK
         id: apk
         run: |
-          echo "🔍 البحث عن APK..."
           APK_PATH=$(find app/build/outputs/apk/${{ env.BUILD_TYPE }} -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            echo "❌ لم يتم العثور على APK"
-            echo "📁 محتويات مجلد app/build/outputs/apk/:"
-            ls -la app/build/outputs/apk/ || echo "المجلد غير موجود"
-            exit 1
+            echo "لم يتم العثور على APK" && exit 1
           fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "✅ تم العثور على APK: $APK_PATH"
-          echo "📊 حجم APK: $(du -h "$APK_PATH" | cut -f1)"
+          echo "Found APK at: $APK_PATH"
 
       # ---- Upload Artifact ----
       - name: Upload APK Artifact
