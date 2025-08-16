@@ -79,15 +79,42 @@ jobs:
           echo "🧪 اختبار إعداد Gradle..."
           ./gradlew projects
           echo "✅ اختبار Gradle نجح"
+          
+      # ---- Diagnose Project ----
+      - name: Diagnose Project
+        run: |
+          echo "🔍 تشخيص المشروع..."
+          echo "📁 محتويات المجلد الجذر:"
+          ls -la
+          echo ""
+          echo "📁 محتويات مجلد app:"
+          ls -la app/
+          echo ""
+          echo "📄 محتوى build.gradle (Project):"
+          cat build.gradle
+          echo ""
+          echo "📄 محتوى app/build.gradle:"
+          cat app/build.gradle
+          echo ""
+          echo "📄 محتوى settings.gradle:"
+          cat settings.gradle
+          echo "✅ تم تشخيص المشروع"
 
+      # ---- Test Dependencies ----
+      - name: Test Dependencies
+        run: |
+          echo "🧪 اختبار التبعيات..."
+          ./gradlew dependencies --no-daemon
+          echo "✅ اختبار التبعيات مكتمل"
+          
       # ---- Build APK ----
       - name: Build APK
         run: |
           echo "🏗️ بدء بناء APK..."
           if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
-            ./gradlew assembleRelease --no-daemon --stacktrace
+            ./gradlew assembleRelease --no-daemon --stacktrace --info --debug
           else
-            ./gradlew assembleDebug --no-daemon --stacktrace
+            ./gradlew assembleDebug --no-daemon --stacktrace --info --debug
           fi
           echo "✅ تم بناء APK بنجاح"
 
