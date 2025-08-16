@@ -1,0 +1,85 @@
+name: Build APK Simple (Minimal Setup)
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK Components
+        run: |
+          echo "Installing Android SDK components..."
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-34"
+          sdkmanager "build-tools;34.0.0"
+          echo "Android SDK components installed successfully"
+
+      - name: Install Gradle
+        run: |
+          echo "Installing Gradle..."
+          sudo apt-get update
+          sudo apt-get install -y gradle
+          gradle --version
+          echo "Gradle installed successfully"
+
+      - name: Set Environment Variables
+        run: |
+          echo "Setting environment variables..."
+          export ANDROID_HOME=/usr/local/lib/android/sdk
+          export PATH=$PATH:$ANDROID_HOME/tools:$ANDROID_HOME/platform-tools
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          echo "Environment variables set successfully"
+
+      - name: Create gradle.properties
+        run: |
+          echo "Creating gradle.properties..."
+          cat > gradle.properties << EOF
+          org.gradle.daemon=false
+          org.gradle.caching=false
+          org.gradle.parallel=false
+          android.useAndroidX=true
+          android.enableJetifier=true
+          EOF
+          echo "gradle.properties created successfully"
+
+      - name: Test Gradle Setup
+        run: |
+          echo "Testing Gradle setup..."
+          gradle --version
+          gradle projects
+          echo "Gradle setup test completed"
+
+      - name: Build APK
+        run: |
+          echo "Building APK..."
+          gradle clean
+          gradle assembleDebug --no-daemon --stacktrace
+          echo "Build completed"
+
+      - name: Find APK
+        run: |
+          echo "Finding APK..."
+          find . -name "*.apk" -type f
+          echo "APK search completed"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug.apk
+          path: app/build/outputs/apk/debug/app-debug.apk
