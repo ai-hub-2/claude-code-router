@@ -77,7 +77,12 @@ jobs:
 
       # ---- Build APK ----
       - name: Build APK
-        run: ./gradlew assemble${{ env.BUILD_TYPE^ }} --no-daemon
+        run: |
+          if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
+            ./gradlew assembleRelease --no-daemon
+          else
+            ./gradlew assembleDebug --no-daemon
+          fi
 
       # ---- Locate APK ----
       - name: Locate APK
