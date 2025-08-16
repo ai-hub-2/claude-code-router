@@ -1,0 +1,97 @@
+name: Test Android Build Step by Step
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-34"
+          sdkmanager "build-tools;34.0.0"
+
+      - name: Setup Gradle Wrapper
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Step 1 - Test Gradle Projects
+        run: |
+          echo "=== STEP 1: Testing Gradle Projects ==="
+          ./gradlew projects
+          echo "✅ Step 1 passed"
+
+      - name: Step 2 - Test Gradle Tasks
+        run: |
+          echo "=== STEP 2: Testing Gradle Tasks ==="
+          ./gradlew tasks --all
+          echo "✅ Step 2 passed"
+
+      - name: Step 3 - Test Gradle Dependencies
+        run: |
+          echo "=== STEP 3: Testing Gradle Dependencies ==="
+          ./gradlew dependencies
+          echo "✅ Step 3 passed"
+
+      - name: Step 4 - Test Gradle Clean
+        run: |
+          echo "=== STEP 4: Testing Gradle Clean ==="
+          ./gradlew clean
+          echo "✅ Step 4 passed"
+
+      - name: Step 5 - Test Gradle Compile
+        run: |
+          echo "=== STEP 5: Testing Gradle Compile ==="
+          ./gradlew compileDebugJavaWithJavac
+          echo "✅ Step 5 passed"
+
+      - name: Step 6 - Test Gradle Compile Kotlin
+        run: |
+          echo "=== STEP 6: Testing Gradle Compile Kotlin ==="
+          ./gradlew compileDebugKotlin
+          echo "✅ Step 6 passed"
+
+      - name: Step 7 - Test Gradle Process Resources
+        run: |
+          echo "=== STEP 7: Testing Gradle Process Resources ==="
+          ./gradlew processDebugResources
+          echo "✅ Step 7 passed"
+
+      - name: Step 8 - Test Gradle Package
+        run: |
+          echo "=== STEP 8: Testing Gradle Package ==="
+          ./gradlew packageDebug
+          echo "✅ Step 8 passed"
+
+      - name: Step 9 - Test Full Build
+        run: |
+          echo "=== STEP 9: Testing Full Build ==="
+          ./gradlew assembleDebug
+          echo "✅ Step 9 passed"
+
+      - name: Check Result
+        run: |
+          echo "=== FINAL CHECK ==="
+          if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+            echo "✅ SUCCESS: APK created successfully!"
+            ls -la app/build/outputs/apk/debug/
+          else
+            echo "❌ FAILURE: APK not found"
+            find . -name "*.apk" -type f
+          fi
