@@ -1,0 +1,252 @@
+name: Fixed Android Build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install SDK Components
+        run: |
+          sdkmanager "platform-tools"
+          sdkmanager "platforms;android-34"
+          sdkmanager "build-tools;34.0.0"
+
+      - name: Setup Gradle Wrapper
+        run: |
+          chmod +x gradlew
+          ./gradlew --version
+
+      - name: Fix Gradle Properties
+        run: |
+          echo "=== FIXING GRADLE PROPERTIES ==="
+          cat > gradle.properties << EOF
+          org.gradle.daemon=false
+          org.gradle.caching=false
+          org.gradle.parallel=false
+          android.useAndroidX=true
+          android.enableJetifier=true
+          android.enableR8.fullMode=false
+          android.enableD8.desugaring=true
+          EOF
+          echo "✅ Gradle properties fixed"
+
+      - name: Fix App Build Gradle
+        run: |
+          echo "=== FIXING APP BUILD.GRADLE ==="
+          cat > app/build.gradle << EOF
+          apply plugin: 'com.android.application'
+          apply plugin: 'kotlin-android'
+
+          android {
+              namespace 'com.example.claudecodeui'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.example.claudecodeui"
+                  minSdk 21
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+                      signingConfig signingConfigs.debug
+                  }
+                  debug {
+                      debuggable true
+                  }
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+
+              kotlinOptions {
+                  jvmTarget = '17'
+              }
+          }
+
+          dependencies {
+              implementation "org.jetbrains.kotlin:kotlin-stdlib:1.9.0"
+              implementation 'androidx.appcompat:appcompat:1.7.0'
+          }
+          EOF
+          echo "✅ App build.gradle fixed"
+
+      - name: Fix Project Build Gradle
+        run: |
+          echo "=== FIXING PROJECT BUILD.GRADLE ==="
+          cat > build.gradle << EOF
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.1.1'
+                  classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0'
+              }
+          }
+
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+          echo "✅ Project build.gradle fixed"
+
+      - name: Fix Settings Gradle
+        run: |
+          echo "=== FIXING SETTINGS.GRADLE ==="
+          cat > settings.gradle << EOF
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+
+          rootProject.name = 'claudecodeui'
+          include ':app'
+          EOF
+          echo "✅ Settings.gradle fixed"
+
+      - name: Fix AndroidManifest
+        run: |
+          echo "=== FIXING ANDROIDMANIFEST.XML ==="
+          cat > app/src/main/AndroidManifest.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <application
+                  android:allowBackup="true"
+                  android:icon="@mipmap/ic_launcher"
+                  android:label="@string/app_name"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+                  
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+
+              </application>
+
+          </manifest>
+          EOF
+          echo "✅ AndroidManifest.xml fixed"
+
+      - name: Fix MainActivity
+        run: |
+          echo "=== FIXING MAINACTIVITY.KT ==="
+          mkdir -p app/src/main/java/com/example/claudecodeui
+          cat > app/src/main/java/com/example/claudecodeui/MainActivity.kt << EOF
+          package com.example.claudecodeui
+
+          import android.os.Bundle
+          import androidx.appcompat.app.AppCompatActivity
+
+          class MainActivity : AppCompatActivity() {
+              
+              override fun onCreate(savedInstanceState: Bundle?) {
+                  super.onCreate(savedInstanceState)
+                  setContentView(R.layout.activity_main)
+              }
+          }
+          EOF
+          echo "✅ MainActivity.kt fixed"
+
+      - name: Fix Layout
+        run: |
+          echo "=== FIXING LAYOUT ==="
+          mkdir -p app/src/main/res/layout
+          cat > app/src/main/res/layout/activity_main.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:orientation="vertical"
+              android:gravity="center">
+
+              <TextView
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:text="@string/app_name"
+                  android:textSize="24sp"
+                  android:textStyle="bold" />
+
+          </LinearLayout>
+          EOF
+          echo "✅ Layout fixed"
+
+      - name: Fix Strings
+        run: |
+          echo "=== FIXING STRINGS ==="
+          mkdir -p app/src/main/res/values
+          cat > app/src/main/res/values/strings.xml << EOF
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <string name="app_name">Claude Code Router</string>
+          </resources>
+          EOF
+          echo "✅ Strings fixed"
+
+      - name: Test Build
+        run: |
+          echo "=== TESTING BUILD ==="
+          ./gradlew clean
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          echo "✅ Build completed successfully"
+
+      - name: Check APK
+        run: |
+          echo "=== CHECKING APK ==="
+          if [ -f "app/build/outputs/apk/release/app-release.apk" ]; then
+            echo "✅ SUCCESS: APK created successfully!"
+            ls -la app/build/outputs/apk/release/
+            echo "APK size: $(du -h app/build/outputs/apk/release/app-release.apk | cut -f1)"
+          else
+            echo "❌ FAILURE: APK not found"
+            find . -name "*.apk" -type f
+          fi
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release.apk
+          path: app/build/outputs/apk/release/app-release.apk
