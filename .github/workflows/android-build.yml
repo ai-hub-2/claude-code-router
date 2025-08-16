@@ -34,11 +34,13 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # ---- Gradle 8.3 ----
+      # ---- Gradle 8.3 (without cache) ----
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: 8.3
+          cache-read-only: false
+          cache-write-only: false
 
       # ---- Android SDK ----
       - name: Setup Android SDK
@@ -57,12 +59,14 @@ jobs:
           fi
           echo "✅ gradle-wrapper.jar موجود وصحيح"
 
-      # ---- Clear Gradle Cache (avoid GitHub cache issues) ----
-      - name: Clear Gradle Cache
+      # ---- Disable Gradle Cache completely ----
+      - name: Disable Gradle Cache
         run: |
           rm -rf ~/.gradle/caches
           rm -rf .gradle
-          echo "✅ تم مسح Gradle cache"
+          mkdir -p ~/.gradle
+          echo "org.gradle.caching=false" > ~/.gradle/gradle.properties
+          echo "✅ تم تعطيل Gradle cache تماماً"
 
       # ---- Install SDK Components ----
       - name: Install SDK Components
@@ -72,8 +76,10 @@ jobs:
       - name: Verify Gradle Setup
         run: |
           echo "🔍 التحقق من إعداد Gradle..."
+          echo "org.gradle.caching=false" >> gradle.properties
+          echo "org.gradle.parallel=false" >> gradle.properties
           ./gradlew --version
-          echo "✅ Gradle جاهز للبناء"
+          echo "✅ Gradle جاهز للبناء (بدون cache)"
 
       # ---- Build APK ----
       - name: Build APK
