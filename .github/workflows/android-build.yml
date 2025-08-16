@@ -1,4 +1,4 @@
-name: Build Claude Code Router APK (No Cache)
+name: Build Claude Code Router APK (No Cache - Reliable)
 
 on:
   push:
@@ -34,51 +34,67 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      # ---- Gradle 8.3 ----
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: 8.3
+      # ---- Install Gradle via apt (no cache) ----
+      - name: Install Gradle
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gradle
+          gradle --version
 
       # ---- Android SDK ----
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      # ---- Ensure gradlew permissions ----
-      - name: Set Gradle Permissions
-        run: chmod +x gradlew
-
-      # ---- Check gradle-wrapper.jar ----
-      - name: Check Gradle Wrapper
+      # ---- Clear all cache directories ----
+      - name: Clear All Cache
         run: |
-          if [ ! -f gradle/wrapper/gradle-wrapper.jar ]; then
-            echo "gradle-wrapper.jar مفقود أو تالف!"
-            exit 1
-          fi
+          echo "🧹 مسح جميع أنواع الكاش..."
+          rm -rf ~/.gradle
+          rm -rf ~/.android
+          rm -rf .gradle
+          rm -rf build
+          rm -rf app/build
+          echo "✅ تم مسح جميع الكاش"
 
       # ---- Install SDK Components ----
       - name: Install SDK Components
         run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
 
-      # ---- Build APK ----
+      # ---- Create gradle.properties to disable cache ----
+      - name: Disable Gradle Cache
+        run: |
+          echo "org.gradle.caching=false" > gradle.properties
+          echo "org.gradle.parallel=false" >> gradle.properties
+          echo "org.gradle.configureondemand=false" >> gradle.properties
+          echo "org.gradle.daemon=false" >> gradle.properties
+          echo "✅ تم تعطيل جميع أنواع الكاش في Gradle"
+
+      # ---- Build APK using system gradle ----
       - name: Build APK
         run: |
+          echo "🏗️ بدء بناء APK..."
           if [ "${{ env.BUILD_TYPE }}" = "release" ]; then
-            ./gradlew assembleRelease --no-daemon
+            gradle assembleRelease --no-daemon --no-build-cache --no-configuration-cache
           else
-            ./gradlew assembleDebug --no-daemon
+            gradle assembleDebug --no-daemon --no-build-cache --no-configuration-cache
           fi
+          echo "✅ تم بناء APK بنجاح"
 
       # ---- Locate APK ----
       - name: Locate APK
         id: apk
         run: |
+          echo "🔍 البحث عن APK..."
           APK_PATH=$(find app/build/outputs/apk/${{ env.BUILD_TYPE }} -name "*.apk" | head -n 1)
           if [ -z "$APK_PATH" ]; then
-            echo "لم يتم العثور على APK" && exit 1
+            echo "❌ لم يتم العثور على APK"
+            echo "📁 محتويات مجلد app/build/outputs/apk/:"
+            ls -la app/build/outputs/apk/ || echo "المجلد غير موجود"
+            exit 1
           fi
           echo "apk_path=$APK_PATH" >> $GITHUB_OUTPUT
-          echo "Found APK at: $APK_PATH"
+          echo "✅ تم العثور على APK: $APK_PATH"
+          echo "📊 حجم APK: $(du -h "$APK_PATH" | cut -f1)"
 
       # ---- Upload Artifact ----
       - name: Upload APK Artifact
